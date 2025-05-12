@@ -1,1 +1,75 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Load the dataset
+df = pd.read_csv('/sneha_cb (1).csv', parse_dates=['start_time'])
+
+df['day_of_week'] = df['start_time'].dt.day_name()
+df['month'] = df['start_time'].dt.month_name()
+df['hour'] = df['start_time'].dt.hour
+
+# Filter to top 50 busiest start stations
+top_50_stations = df['start_station_name'].value_counts().head(50).index
+df_filtered = df[df['start_station_name'].isin(top_50_stations)].copy()
+
+# Create top 20 start station DataFrame
+top_20_df = df_filtered['start_station_name'].value_counts().head(20).reset_index()
+top_20_df.columns = ['Station', 'Trip Count']
+
+
+plt.figure(figsize=(12, 8))
+sns.barplot(data=top_20_df, x='Trip Count', y='Station')
+plt.title('Top 20 Start Stations with Most Amount of Trips')
+plt.xlabel('Number of Trips')
+plt.ylabel('Station')
+plt.tight_layout()
+plt.show()
+
+hourly_counts = df_filtered['hour'].value_counts().sort_index()
+
+plt.figure(figsize=(10, 6))
+sns.lineplot(x=hourly_counts.index, y=hourly_counts.values, marker='o')
+plt.title('Trip Volume by Hour')
+plt.xlabel('Hour of Day')
+plt.ylabel('Number of Trips')
+plt.grid(True)
+plt.tight_layout()
+plt.savefig('trip_volume_by_hour_saturday.png')
+plt.show()
+
+# Convert times
+df_filtered['start_time'] = pd.to_datetime(df_filtered['start_time'], errors='coerce')
+df_filtered['end_time'] = pd.to_datetime(df_filtered['end_time'], errors='coerce')
+
+# Create trip duration in seconds
+df_filtered['tripduration'] = (df_filtered['end_time'] - df_filtered['start_time']).dt.total_seconds()
+
+# Keep only valid durations  (0 < duration < 7200 seconds = 2 hours)
+df_valid = df_filtered[(df_filtered['tripduration'] > 0) & (df_filtered['tripduration'] < 7200)]
+
+plt.figure(figsize=(10, 6))
+sns.scatterplot(data=df_valid.sample(500), x='hour', y='tripduration', alpha=0.3, s=20)
+plt.title('Trip Duration by Hour')
+plt.xlabel('Hour of Day')
+plt.ylabel('Trip Duration (seconds)')
+plt.grid(True)
+plt.tight_layout()
+plt.savefig('tripduration_by_hour_scatter_cleaned.png')
+plt.show()
+
+top_end_stations = df_filtered['end_station_name'].value_counts().head(15)
+
+plt.figure(figsize=(10, 8))
+sns.barplot(y=top_end_stations.index, x=top_end_stations.values)
+plt.title('Top 15 End Stations')
+plt.xlabel('Number of Trips')
+plt.ylabel('End Station')
+plt.tight_layout()
+plt.show()
 
